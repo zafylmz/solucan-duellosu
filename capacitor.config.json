@@ -1,0 +1,8 @@
+{
+  "appId": "com.zafylmz.solucanduellosu",
+  "appName": "Solucan Düellosu",
+  "webDir": "www",
+  "backgroundColor": "#1b130d",
+  "android": { "backgroundColor": "#1b130d" },
+  "ios": { "backgroundColor": "#1b130d", "contentInset": "never" }
+}
