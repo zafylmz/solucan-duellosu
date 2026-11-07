@@ -71,6 +71,32 @@ kbd{font:600 12px var(--f-body);background:var(--panel);border:1px solid var(--l
 .tbtn.fire{background:var(--hurt);border-color:var(--hurt);grid-row:span 2;min-height:120px}
 .tbtn.on{filter:brightness(1.4)}
 .foot{display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px;align-items:center}
+/* Özel oda lobisi — AI menüsünden ayrı giriş */
+.lobby[hidden],.room-pwd[hidden],.room-wait[hidden]{display:none!important}
+.lobby,.room-wait{position:fixed;inset:0;z-index:40;background:linear-gradient(165deg,#140e0a 0%,#1b130d 42%,#24180f 100%);overflow:auto;padding:max(16px,env(safe-area-inset-top,0px)) max(16px,env(safe-area-inset-right,0px)) max(24px,env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px))}
+.lobby-inner,.room-wait-inner{max-width:560px;margin:0 auto;display:flex;flex-direction:column;gap:18px}
+.lobby h2,.room-wait h2{font-family:var(--f-display);font-weight:400;font-size:clamp(28px,7vw,44px);margin:0;color:var(--ochre);line-height:1}
+.lobby-lead,.room-wait p{margin:0;color:var(--muted);font-size:14px;line-height:1.45;max-width:42ch}
+.lobby-mode{font-size:12px;letter-spacing:.05em;text-transform:uppercase;color:var(--muted)}
+.lobby-form{display:flex;flex-direction:column;gap:10px;padding-top:4px;border-top:1px solid var(--line)}
+.lobby-form label{display:flex;flex-direction:column;gap:4px;font-size:12px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.lobby-form input{font:600 15px var(--f-body);color:var(--text);background:var(--panel);border:1px solid var(--line);border-radius:4px;padding:10px 12px}
+.lobby-form input:focus-visible{outline:2px solid var(--text);outline-offset:2px}
+.lobby-sections{display:flex;flex-direction:column;gap:20px}
+.lobby-sec h3{font:800 13px var(--f-body);letter-spacing:.08em;text-transform:uppercase;color:var(--ochre);margin:0 0 8px;padding-bottom:6px;border-bottom:1px solid var(--line)}
+.room-list{display:flex;flex-direction:column;gap:6px;min-height:2.5rem}
+.room-item{display:flex;justify-content:space-between;align-items:baseline;gap:12px;width:100%;text-align:left;font:700 15px var(--f-body);color:var(--text);background:var(--panel);border:1px solid var(--line);border-radius:4px;padding:12px 14px;cursor:pointer}
+.room-item:hover,.room-item:focus-visible{border-color:var(--ochre);outline:none}
+.room-item[data-locked="1"]{border-style:dashed}
+.room-name{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.room-meta{flex-shrink:0;font-size:12px;font-weight:600;color:var(--muted);letter-spacing:.04em;text-transform:uppercase}
+.room-empty{margin:0;color:var(--muted);font-size:13px}
+.room-err{margin:0;color:var(--hurt);font-size:13px;font-weight:700}
+.room-pwd{position:fixed;inset:0;z-index:50;display:flex;align-items:center;justify-content:center;padding:20px;background:rgba(12,8,5,.78)}
+.room-pwd-box{width:min(360px,100%);background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:18px;display:flex;flex-direction:column;gap:12px}
+.room-pwd-box h3{font-family:var(--f-display);font-weight:400;font-size:26px;margin:0;color:var(--ochre)}
+.room-pwd-box p{margin:0;color:var(--muted);font-size:13px}
+.room-pwd-box input{font:600 15px var(--f-body);color:var(--text);background:var(--soil);border:1px solid var(--line);border-radius:4px;padding:10px 12px}
 @media (pointer:coarse){.touch{display:grid}.keys{display:none}}
 @media (max-width:480px){.score{font-size:22px}.hud{padding:6px 8px}}
 @media (prefers-reduced-motion:reduce){.bar i{transition:none}}
@@ -115,6 +141,9 @@ kbd{font:600 12px var(--f-body);background:var(--panel);border:1px solid var(--l
         <button class="btn" id="play">Maça başla</button>
         <button class="btn ghost" id="newmap">Yeni harita</button>
       </div>
+      <div class="row">
+        <button class="btn ghost" id="roomsBtn" type="button">Özel odalar</button>
+      </div>
     </div>
   </div>
 
@@ -140,6 +169,66 @@ kbd{font:600 12px var(--f-body);background:var(--panel);border:1px solid var(--l
       <span><kbd>Q</kbd> silah değiştir</span>
     </div>
     <button class="btn ghost" id="mute" style="padding:6px 12px;font-size:12px">Ses: açık</button>
+  </div>
+</div>
+
+<div class="lobby" id="lobby" hidden>
+  <div class="lobby-inner">
+    <div class="row" style="justify-content:space-between">
+      <button class="btn ghost" type="button" id="roomBack">← Menü</button>
+      <button class="btn ghost" type="button" id="roomRefresh">Yenile</button>
+    </div>
+    <div>
+      <h2>Özel odalar</h2>
+      <p class="lobby-lead">Oda kur veya listeden gir. Şifreli ve açık odalar ayrı bölümlerde.</p>
+      <p class="lobby-mode" id="roomMode">…</p>
+    </div>
+    <div class="lobby-form">
+      <label>Oda adı
+        <input id="roomName" type="text" maxlength="40" placeholder="ör. Gece tüneli" autocomplete="off">
+      </label>
+      <label>Şifre (isteğe bağlı)
+        <input id="roomPass" type="password" maxlength="64" placeholder="Boş bırak = açık oda" autocomplete="new-password">
+      </label>
+      <div class="row" style="justify-content:flex-start">
+        <button class="btn" type="button" id="roomCreate">Oda oluştur</button>
+      </div>
+    </div>
+    <p class="room-err" id="roomErr" hidden></p>
+    <div class="lobby-sections">
+      <section class="lobby-sec" aria-labelledby="openRoomsTitle">
+        <h3 id="openRoomsTitle">Açık odalar</h3>
+        <div class="room-list" id="roomOpenList"></div>
+      </section>
+      <section class="lobby-sec" aria-labelledby="lockRoomsTitle">
+        <h3 id="lockRoomsTitle">Şifreli odalar</h3>
+        <div class="room-list" id="roomLockList"></div>
+      </section>
+    </div>
+  </div>
+</div>
+
+<div class="room-wait" id="roomWaiting" hidden>
+  <div class="room-wait-inner">
+    <h2 id="roomWaitName">Oda</h2>
+    <p id="roomWaitKind">Açık oda</p>
+    <p>Rakip bekleniyor. Çevrimiçi maç akışı sonraki adımda bağlanacak; şimdilik odaya girdin. AI maçı menüden oynanmaya devam eder.</p>
+    <div class="row" style="justify-content:flex-start">
+      <button class="btn ghost" type="button" id="roomLeave">Lobiye dön</button>
+      <button class="btn ghost" type="button" id="roomClose" hidden>Odayı kapat</button>
+    </div>
+  </div>
+</div>
+
+<div class="room-pwd" id="roomPwd" hidden role="dialog" aria-modal="true" aria-labelledby="roomPwdTitle">
+  <div class="room-pwd-box">
+    <h3 id="roomPwdTitle">Şifre gerekli</h3>
+    <p>Bu oda kilitli. Girmek için şifreyi yaz.</p>
+    <input id="roomPwdInput" type="password" maxlength="64" placeholder="Oda şifresi" autocomplete="current-password">
+    <div class="row">
+      <button class="btn" type="button" id="roomPwdOk">Gir</button>
+      <button class="btn ghost" type="button" id="roomPwdCancel">Vazgeç</button>
+    </div>
   </div>
 </div>
 
@@ -436,6 +525,7 @@ function frame(t){requestAnimationFrame(frame);acc+=Math.min(100,t-last);last=t;
 newRound(false);camX=Math.max(0,Math.min(W-VW,me.x-VW/2));camY=Math.max(0,Math.min(H-VH,me.y-VH/2));requestAnimationFrame(frame);
 })();
 </script>
+<script type="module" src="rooms.js"></script>
 <script>if('serviceWorker' in navigator&&location.protocol==='https:'&&!window.Capacitor){navigator.serviceWorker.register('sw.js').catch(()=>{})}</script>
 </body>
 </html>

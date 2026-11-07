@@ -26,3 +26,14 @@ npm ci
 npx cap sync        # www/ değişikliklerini android/ ve ios/ içine kopyalar
 npx cap open android
 ```
+
+## Özel odalar (Supabase)
+
+Menüdeki **Özel odalar** AI maçından ayrı bir lobidir. Açık ve şifreli odalar ayrı listelenir.
+
+1. Supabase projesinde `supabase/schema.sql` dosyasını SQL Editor’da çalıştırın.
+2. Cursor Secrets / ortam değişkenleri (anon key istemcide RLS ile kullanılır):
+   - `SUPABASE_URL`
+   - `SUPABASE_ANON_KEY`
+3. Değerleri `www/sd-config.js` içine yazabilir veya sayfa yüklenmeden `window.SUPABASE_URL` / `window.SUPABASE_ANON_KEY` enjekte edebilirsiniz.
+4. Secret yoksa lobi **yerel mock** moda düşer (`localStorage`); oyun kırılmaz, AI maçı çalışmaya devam eder.
