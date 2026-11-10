@@ -2,7 +2,7 @@ html,
 body {
   margin: 0;
   height: 100%;
-  background: #1c0d12;
+  background: #12301c;
   color: #4a2430;
   font-family: "Liberation Serif", "Noto Sans", Georgia, serif;
 }
@@ -14,7 +14,7 @@ body {
   width: min(100vw, calc(100vh * 9 / 16));
   height: min(100vh, calc(100vw * 16 / 9));
   overflow: hidden;
-  background: #3a1822;
+  background: #8fd0f2;
 }
 
 #view {
@@ -36,6 +36,24 @@ body {
 
 html.clean #panel {
   display: none;
+}
+
+#hoppa {
+  position: absolute;
+  left: 50%;
+  top: 16%;
+  z-index: 4;
+  margin: 0;
+  pointer-events: none;
+  opacity: 0;
+  font-family: "Liberation Serif", "Noto Sans", Georgia, serif;
+  font-size: 92px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  color: #fff8e4;
+  -webkit-text-stroke: 10px #d21f2a;
+  paint-order: stroke fill;
+  text-shadow: 0 8px 0 rgba(120, 16, 24, 0.35);
 }
 
 #panel h1 {

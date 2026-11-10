@@ -1,6 +1,6 @@
 import { cleanName, GUEST_CAP } from '../shared/join.js';
 import { LEADERS, RING_SPIN, Z_SCALE, ringSlots } from './path.js';
-import { createPerson, poseArms } from './people.js';
+import { createPerson, placeLabel, poseArms } from './people.js';
 import * as THREE from 'three';
 
 const BEAT = Math.PI * 2 / 1.15;
@@ -12,8 +12,8 @@ function lerpAngle(current, target, amount) {
   return current + delta * amount;
 }
 
-export function createLine(scene, camera, { onArrive, cast } = {}) {
-  const leaders = LEADERS.map((spec) => createPerson({ ...spec, cast }));
+export function createLine(scene, camera, { onArrive } = {}) {
+  const leaders = LEADERS.map((spec) => createPerson(spec));
   const guests = [];
   for (const person of leaders) scene.add(person.root);
 
@@ -27,7 +27,7 @@ export function createLine(scene, camera, { onArrive, cast } = {}) {
     if (!name || !id) return false;
     if (guests.some((person) => person.id === id)) return false;
     if (guests.length >= GUEST_CAP) return false;
-    const person = createPerson({ id, name, role: 'guest', cast });
+    const person = createPerson({ id, name, role: 'guest' });
     scene.add(person.root);
     guests.push(person);
     onArrive?.(person);
@@ -66,8 +66,9 @@ export function createLine(scene, camera, { onArrive, cast } = {}) {
       const faceX = tangentX * 0.75 + inwardX * 0.25;
       const faceZ = tangentZ * 0.75 + inwardZ * 0.25;
       person.root.rotation.y = Math.atan2(faceX, faceZ);
-      person.root.rotation.z = Math.sin(phase) * 0.03;
+      person.root.rotation.z = Math.sin(phase) * 0.04;
       person.root.scale.setScalar(person.baseScale * eased);
+      placeLabel(person);
     });
 
     leaders.forEach((person, index) => {
@@ -79,22 +80,21 @@ export function createLine(scene, camera, { onArrive, cast } = {}) {
       const dx = camera.position.x - person.root.position.x;
       const dz = camera.position.z - person.root.position.z;
       person.root.rotation.y = Math.atan2(dx, dz);
-      person.root.rotation.z = Math.sin(phase) * 0.03;
+      person.root.rotation.z = Math.sin(phase) * 0.04;
       person.ringId = -1;
+      placeLabel(person);
     });
 
-    const pose = (person, next) => {
+    const pose = (person, next, phase) => {
       if (!next) {
-        poseArms(person, null);
+        poseArms(person, null, phase);
         return;
       }
       person.root.updateMatrixWorld(true);
       next.root.updateMatrixWorld(true);
       const distance = person.root.position.distanceTo(next.root.position);
-      poseArms(person, distance < 1.35 ? next : null);
+      poseArms(person, distance < 0.95 ? next : null, phase);
     };
-
-    for (const person of everyone()) person.mixer?.update(dt);
 
     pose(leaders[0], leaders[1], time * BEAT);
     pose(leaders[1], null, time * BEAT + 0.4);

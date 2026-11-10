@@ -1,43 +1,33 @@
 import * as THREE from 'three';
-import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
-import * as SkeletonUtils from 'three/addons/utils/SkeletonUtils.js';
 
+const UNIT_X = new THREE.Vector3(1, 0, 0);
 const _local = new THREE.Vector3();
 const _dir = new THREE.Vector3();
 const _a = new THREE.Vector3();
 const _b = new THREE.Vector3();
 const _hold = new THREE.Vector3();
 
-const FONT = '700 68px "Liberation Serif", "Noto Sans", serif';
+const FONT = '700 64px "Liberation Serif", "Noto Sans", serif';
 
-const FILES = {
-  gelin: '/models/gelin.glb',
-  damat: '/models/damat.glb',
-  kadin: '/models/kadin.glb',
-  erkek: '/models/erkek.glb',
-};
-
-const RED = 0xc4162a;
-const RED_DEEP = 0x9d1220;
-
-let castPromise;
-
-export function loadCast() {
-  if (!castPromise) {
-    const loader = new GLTFLoader();
-    castPromise = Promise.all(
-      Object.entries(FILES).map(async ([key, url]) => [key, await loader.loadAsync(url)]),
-    ).then((entries) => Object.fromEntries(entries));
-  }
-  return castPromise;
-}
+const VESTS = [0xe23d3d, 0xf0b429, 0x2f6bff, 0x1f9d4a, 0xf27a1a, 0x7a3ee0, 0x12233f];
+const SALVAR = [0x1c1c1c, 0x10243f, 0x6d2433, 0x143528];
+const HAIR = [0x2a1a14, 0x4a2c1c, 0x111111, 0x6a3a22, 0xc9843a];
 
 function hashName(name) {
   let hash = 2166136261;
-  for (const char of name) {
-    hash = Math.imul(hash ^ char.codePointAt(0), 16777619);
-  }
+  for (const char of name) hash = Math.imul(hash ^ char.codePointAt(0), 16777619);
   return hash >>> 0;
+}
+
+function flat(color) {
+  return new THREE.MeshLambertMaterial({ color, flatShading: true });
+}
+
+function addMesh(parent, geometry, material, x, y, z) {
+  const mesh = new THREE.Mesh(geometry, material);
+  mesh.position.set(x, y, z);
+  parent.add(mesh);
+  return mesh;
 }
 
 function makeLabel(text) {
@@ -46,37 +36,31 @@ function makeLabel(text) {
   const chars = [...text];
   const shown = chars.length > 16 ? `${chars.slice(0, 15).join('')}…` : text;
   const textWidth = Math.ceil(measure.measureText(shown).width);
-  const width = Math.max(160, Math.min(560, textWidth + 56));
-  const height = 112;
+  const width = Math.max(160, Math.min(520, textWidth + 48));
+  const height = 96;
   const canvas = document.createElement('canvas');
   canvas.width = width;
   canvas.height = height;
   const ctx = canvas.getContext('2d');
   ctx.font = FONT;
-  roundRect(ctx, 3, 3, width - 6, height - 6, 40);
-  ctx.fillStyle = 'rgba(48, 18, 26, 0.82)';
+  roundRect(ctx, 4, 4, width - 8, height - 8, 36);
+  ctx.fillStyle = 'rgba(28, 42, 18, 0.88)';
   ctx.fill();
   ctx.lineWidth = 6;
-  ctx.strokeStyle = 'rgba(232, 196, 138, 0.95)';
+  ctx.strokeStyle = '#ffe08a';
   ctx.stroke();
-  ctx.fillStyle = '#fff8f1';
+  ctx.fillStyle = '#fffaf0';
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
-  ctx.fillText(shown, width / 2, height / 2 + 3);
+  ctx.fillText(shown, width / 2, height / 2 + 2);
   const texture = new THREE.CanvasTexture(canvas);
   texture.colorSpace = THREE.SRGBColorSpace;
   const sprite = new THREE.Sprite(
-    new THREE.SpriteMaterial({
-      map: texture,
-      transparent: true,
-      depthWrite: false,
-      depthTest: false,
-    }),
+    new THREE.SpriteMaterial({ map: texture, transparent: true, depthWrite: false, depthTest: false }),
   );
-  sprite.center.set(0.5, 0.5);
+  sprite.center.set(0.5, 0);
   sprite.userData.aspect = height / width;
   sprite.renderOrder = 10;
-  sprite.scale.set(0.6, 0.6 * (height / width), 1);
   return sprite;
 }
 
@@ -90,211 +74,151 @@ function roundRect(ctx, x, y, w, h, r) {
   ctx.closePath();
 }
 
-function detachMaterials(root) {
-  const map = new Map();
-  root.traverse((obj) => {
-    if (!obj.isMesh) return;
-    const list = Array.isArray(obj.material) ? obj.material : [obj.material];
-    const cloned = list.map((mat) => {
-      if (!map.has(mat.uuid)) {
-        const copy = mat.clone();
-        copy.metalness = 0;
-        copy.roughness = mat.name === 'Eye' ? 0.2 : 0.64;
-        map.set(mat.uuid, copy);
-      }
-      return map.get(mat.uuid);
-    });
-    obj.material = Array.isArray(obj.material) ? cloned : cloned[0];
-  });
+function makeArm(parent, side, sleeve, skin) {
+  const pivot = new THREE.Group();
+  pivot.position.set(side * 0.16, 0.72, 0);
+  const geometry = new THREE.CylinderGeometry(0.04, 0.035, 1, 6);
+  geometry.rotateZ(-Math.PI / 2);
+  geometry.translate(0.5, 0, 0);
+  const limb = new THREE.Mesh(geometry, sleeve);
+  limb.scale.set(0.34, 1, 1);
+  pivot.add(limb);
+  const hand = new THREE.Mesh(new THREE.SphereGeometry(0.045, 8, 6), skin);
+  hand.position.set(0.34, 0, 0);
+  pivot.add(hand);
+  parent.add(pivot);
+  pivot.userData.limb = limb;
+  pivot.userData.hand = hand;
+  pivot.userData.side = side;
+  return pivot;
 }
 
-function paint(root, nodeName, colors) {
-  const node = root.getObjectByName(nodeName);
-  if (!node) return;
-  node.traverse((obj) => {
-    if (!obj.isMesh) return;
-    const list = Array.isArray(obj.material) ? obj.material : [obj.material];
-    for (const mat of list) {
-      if (colors[mat.name] === undefined) continue;
-      mat.color.set(colors[mat.name]);
-      mat.metalness = 0;
-      mat.roughness = 0.68;
-    }
-  });
-}
-
-function varySkin(root, tone) {
-  root.traverse((obj) => {
-    if (!obj.isMesh) return;
-    const list = Array.isArray(obj.material) ? obj.material : [obj.material];
-    for (const mat of list) {
-      if (mat.name === 'Skin' || mat.name === 'Skin_Darker') mat.color.multiplyScalar(tone);
-    }
-  });
-}
-
-function prepareArm(arm, side) {
-  const lower = arm?.children.find((child) => child.name.startsWith('LowerArm'));
-  if (!arm) return arm;
-  arm.userData.side = side;
-  arm.userData.restDir = (lower ? lower.position.clone() : new THREE.Vector3(side, 0, 0)).normalize();
-  arm.userData.bindQuat = arm.quaternion.clone();
-  return arm;
-}
-
-function toHead(head, x, y, z) {
-  return head.worldToLocal(new THREE.Vector3(x, y, z));
-}
-
-/** Eyes, mouth, and a headscarf that leaves the face open. Coordinates match the GLB head. */
-function addFace(model, head, role) {
-  model.updateWorldMatrix(true, true);
-  const white = new THREE.MeshStandardMaterial({ color: 0xfffaf8, roughness: 0.25, metalness: 0 });
-  const pupil = new THREE.MeshStandardMaterial({ color: 0x1b120f, roughness: 0.3, metalness: 0 });
-  const lip = new THREE.MeshStandardMaterial({ color: 0x8a4038, roughness: 0.5, metalness: 0 });
-  for (const x of [-0.034, 0.034]) {
-    const eye = new THREE.Mesh(new THREE.SphereGeometry(0.016, 12, 8), white);
-    eye.scale.set(1.05, 0.78, 0.5);
-    eye.position.copy(toHead(head, x, 1.696, 0.168));
-    const dot = new THREE.Mesh(new THREE.SphereGeometry(0.007, 8, 6), pupil);
-    dot.position.copy(toHead(head, x, 1.694, 0.18));
-    head.add(eye, dot);
+function addFace(parent, y, skin) {
+  const head = addMesh(parent, new THREE.SphereGeometry(0.16, 12, 10), skin, 0, y, 0);
+  const eye = new THREE.MeshBasicMaterial({ color: 0x1b140f });
+  const white = new THREE.MeshBasicMaterial({ color: 0xfffaf6 });
+  for (const x of [-0.055, 0.055]) {
+    const ball = new THREE.Mesh(new THREE.SphereGeometry(0.028, 8, 6), white);
+    ball.scale.z = 0.65;
+    ball.position.set(x, y + 0.02, 0.13);
+    parent.add(ball);
+    const dot = new THREE.Mesh(new THREE.SphereGeometry(0.012, 6, 6), eye);
+    dot.position.set(x, y + 0.018, 0.15);
+    parent.add(dot);
   }
-  const smile = new THREE.Mesh(new THREE.TorusGeometry(0.018, 0.004, 6, 12, Math.PI), lip);
+  const smile = new THREE.Mesh(
+    new THREE.TorusGeometry(0.035, 0.008, 5, 8, Math.PI),
+    new THREE.MeshBasicMaterial({ color: 0x8a3a32 }),
+  );
   smile.rotation.z = Math.PI;
-  smile.position.copy(toHead(head, 0, 1.632, 0.168));
-  head.add(smile);
-
-  if (role === 'guest') {
-    const cloth = new THREE.MeshStandardMaterial({
-      color: RED,
-      roughness: 0.66,
-      metalness: 0,
-      side: THREE.DoubleSide,
-    });
-    const cap = new THREE.Mesh(
-      new THREE.SphereGeometry(0.09, 14, 10, 0, Math.PI * 2, 0, Math.PI * 0.5),
-      cloth,
-    );
-    cap.scale.set(1.28, 0.62, 1.15);
-    cap.position.copy(toHead(head, 0, 1.78, -0.01));
-    const band = new THREE.Mesh(new THREE.TorusGeometry(0.092, 0.012, 6, 16, Math.PI * 1.25), cloth);
-    band.rotation.x = Math.PI / 2.15;
-    band.rotation.z = Math.PI * 0.85;
-    band.position.copy(toHead(head, 0, 1.755, 0.04));
-    const left = new THREE.Mesh(new THREE.PlaneGeometry(0.07, 0.32), cloth);
-    left.position.copy(toHead(head, -0.1, 1.6, 0.0));
-    left.rotation.y = 1.15;
-    const right = new THREE.Mesh(new THREE.PlaneGeometry(0.07, 0.32), cloth);
-    right.position.copy(toHead(head, 0.1, 1.6, 0.0));
-    right.rotation.y = -1.15;
-    const tail = new THREE.Mesh(new THREE.PlaneGeometry(0.16, 0.42), cloth);
-    tail.position.copy(toHead(head, 0, 1.5, -0.13));
-    head.add(cap, band, left, right, tail);
-  }
-
-  if (role === 'gelin') {
-    const cloth = new THREE.MeshStandardMaterial({
-      color: 0xfffaf8,
-      transparent: true,
-      opacity: 0.42,
-      roughness: 0.35,
-      metalness: 0,
-      side: THREE.DoubleSide,
-      depthWrite: false,
-    });
-    const veil = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.22, 0.58, 14, 1, true), cloth);
-    veil.position.copy(toHead(head, 0, 1.55, -0.06));
-    head.add(veil);
-  }
-}
-
-function dress(model, role) {
-  if (role === 'gelin') {
-    paint(model, 'Formal_Body', { LimeGreen: 0xfffbf8, Gold: 0xe6c56a });
-    paint(model, 'Formal_Legs', { LimeGreen: 0xfffbf8 });
-    paint(model, 'Formal_Feet', { Red: 0xfffbf8 });
-    return;
-  }
-  if (role === 'damat') {
-    paint(model, 'Suit_Body', { Suit: 0x16181d, Tie: 0x101114, White: 0xf7f4ee });
-    paint(model, 'Suit_Legs', { Suit: 0x16181d });
-    paint(model, 'Suit_Feet', { Black: 0x121214 });
-    const pistol = model.getObjectByName('Pistol');
-    if (pistol) pistol.visible = false;
-    return;
-  }
-  paint(model, 'Casual_Body', { White: RED });
-  paint(model, 'Casual_Legs', { Orange: RED_DEEP });
-  paint(model, 'Casual_Feet', { Grey: 0x3a1218 });
-  paint(model, 'Casual2_Body', { LightBrown: RED });
-  paint(model, 'Casual2_Legs', { LightBlue: RED_DEEP });
-  paint(model, 'Casual2_Feet', { Red_Dark: 0x3a1218, White: 0x2c1014 });
+  smile.position.set(0, y - 0.045, 0.145);
+  parent.add(smile);
+  return head;
 }
 
 /**
- * Rigged Quaternius human. role: 'gelin' | 'damat' | 'guest'
- * Faces +Z. Guests wear red halay clothes and a red headscarf.
+ * Flat-shaded folk dancer, read from above.
+ * role: 'gelin' | 'damat' | 'guest'
  */
-export function createPerson({ id, name, role, cast }) {
-  const guestHash = hashName(name);
-  const sourceKey = role === 'guest' ? (guestHash % 2 === 0 ? 'kadin' : 'erkek') : role;
-  const gltf = cast[sourceKey];
-  const model = SkeletonUtils.clone(gltf.scene);
-  detachMaterials(model);
-  dress(model, role);
-  if (role === 'guest') varySkin(model, 0.94 + (guestHash % 5) * 0.04);
-
-  const head = model.getObjectByName('Head');
-  if (head) addFace(model, head, role);
+export function createPerson({ id, name, role }) {
+  const guestHash = hashName(name || role);
+  const skin = flat(role === 'gelin' ? 0xf3c7a8 : role === 'damat' ? 0xd7a57c : [0xf3c7a4, 0xe0ac86, 0xc68642, 0x8d5524][(guestHash >> 3) % 4]);
+  const vestColor = role === 'gelin' ? 0xfffaf6 : role === 'damat' ? 0x1a1c22 : VESTS[guestHash % VESTS.length];
+  const legColor = role === 'gelin' ? 0xfffaf6 : role === 'damat' ? 0x14161c : SALVAR[guestHash % SALVAR.length];
+  const hairColor = HAIR[(guestHash >> 6) % HAIR.length];
+  const vest = flat(vestColor);
+  const legs = flat(legColor);
+  const hair = flat(role === 'guest' ? hairColor : 0x2a1a14);
+  const white = flat(0xfffaf4);
+  const gold = flat(0xe6b84a);
 
   const root = new THREE.Group();
   const bob = new THREE.Group();
   root.add(bob);
-  bob.add(model);
 
   const shadow = new THREE.Mesh(
-    new THREE.CircleGeometry(0.34, 16),
-    new THREE.MeshBasicMaterial({ color: 0x1c2418, transparent: true, opacity: 0.28, depthWrite: false }),
+    new THREE.CircleGeometry(0.28, 14),
+    new THREE.MeshBasicMaterial({ color: 0x1d3a16, transparent: true, opacity: 0.22, depthWrite: false }),
   );
   shadow.rotation.x = -Math.PI / 2;
   shadow.position.y = 0.02;
   bob.add(shadow);
 
-  const armL = prepareArm(model.getObjectByName('UpperArm.L'), 1);
-  const armR = prepareArm(model.getObjectByName('UpperArm.R'), -1);
-  const shoulderL = model.getObjectByName('Shoulder.L');
-  const shoulderR = model.getObjectByName('Shoulder.R');
+  if (role === 'gelin') {
+    addMesh(bob, new THREE.ConeGeometry(0.26, 0.62, 8), vest, 0, 0.36, 0);
+    const hem = new THREE.Mesh(new THREE.TorusGeometry(0.22, 0.02, 5, 12), gold);
+    hem.rotation.x = Math.PI / 2;
+    hem.position.y = 0.08;
+    bob.add(hem);
+  } else {
+    addMesh(bob, new THREE.CylinderGeometry(0.07, 0.08, 0.36, 6), legs, -0.08, 0.2, 0);
+    addMesh(bob, new THREE.CylinderGeometry(0.07, 0.08, 0.36, 6), legs, 0.08, 0.2, 0);
+    addMesh(bob, new THREE.BoxGeometry(0.34, 0.28, 0.18), vest, 0, 0.58, 0);
+    if (role === 'damat') {
+      addMesh(bob, new THREE.BoxGeometry(0.08, 0.16, 0.02), white, 0, 0.62, 0.09);
+      const tie = addMesh(bob, new THREE.ConeGeometry(0.025, 0.12, 4), flat(0x111111), 0, 0.56, 0.1);
+      tie.rotation.x = 0.15;
+    } else {
+      const sash = new THREE.Mesh(new THREE.TorusGeometry(0.16, 0.018, 5, 10), flat(0xf2d36b));
+      sash.rotation.x = Math.PI / 2;
+      sash.position.y = 0.46;
+      bob.add(sash);
+    }
+  }
+
+  const headY = role === 'gelin' ? 0.86 : 0.9;
+  addFace(bob, headY, skin);
+  addMesh(
+    bob,
+    new THREE.SphereGeometry(0.165, 10, 8, 0, Math.PI * 2, 0, Math.PI * 0.55),
+    hair,
+    0,
+    headY + 0.06,
+    -0.02,
+  );
+
+  if (role === 'gelin') {
+    const veil = new THREE.Mesh(
+      new THREE.CircleGeometry(0.34, 16),
+      new THREE.MeshBasicMaterial({ color: 0xfffaf8, transparent: true, opacity: 0.72, side: THREE.DoubleSide, depthWrite: false }),
+    );
+    veil.rotation.x = -Math.PI / 2.4;
+    veil.position.set(0, 0.7, -0.16);
+    bob.add(veil);
+  } else if (role === 'guest' && guestHash % 3 !== 0) {
+    const scarf = addMesh(bob, new THREE.SphereGeometry(0.12, 8, 6, 0, Math.PI * 2, 0, Math.PI * 0.5), flat(0xc4162a), 0, headY + 0.1, 0);
+    scarf.scale.set(1.2, 0.45, 1.15);
+  } else if (role === 'guest') {
+    addMesh(bob, new THREE.CylinderGeometry(0.09, 0.11, 0.08, 8), flat(0xc4162a), 0, headY + 0.14, 0);
+  }
+
+  const sleeve = role === 'damat' ? vest : role === 'gelin' ? skin : vest;
+  const armL = makeArm(bob, 1, sleeve, skin);
+  const armR = makeArm(bob, -1, sleeve, skin);
+
+  const shoulderL = new THREE.Object3D();
+  shoulderL.position.set(0.18, 0.74, 0);
+  const shoulderR = new THREE.Object3D();
+  shoulderR.position.set(-0.18, 0.74, 0);
+  bob.add(shoulderL, shoulderR);
 
   const headAnchor = new THREE.Object3D();
-  headAnchor.position.set(0, 1.62, 0.08);
+  headAnchor.position.set(0, headY + 0.2, 0.06);
   bob.add(headAnchor);
 
   const label = makeLabel(name);
   const labelAspect = label.userData.aspect;
-  let labelHeight = role === 'guest' ? 0.42 : 0.36;
+  let labelHeight = role === 'guest' ? 0.34 : 0.3;
   let labelWidth = labelHeight / labelAspect;
-  if (labelWidth > 1.15) {
-    labelWidth = 1.15;
+  if (labelWidth > 0.95) {
+    labelWidth = 0.95;
     labelHeight = labelWidth * labelAspect;
   }
   label.scale.set(labelWidth, labelHeight, 1);
-  label.position.set(0, role === 'gelin' ? 2.28 : 2.12, 0);
+  label.position.set(0, headY + 0.42, -0.15);
   bob.add(label);
 
-  const clip = THREE.AnimationClip.findByName(
-    gltf.animations,
-    role === 'guest' ? 'Walk' : 'Idle_Neutral',
-  );
-  const mixer = new THREE.AnimationMixer(model);
-  if (clip) {
-    const action = mixer.clipAction(clip);
-    action.timeScale = role === 'guest' ? 0.72 : 0.4;
-    action.time = (guestHash % 90) / 20;
-    action.play();
-  }
-
-  const baseScale = role === 'guest' ? 0.92 : 1;
+  const baseScale = role === 'guest' ? 1 : 1.08;
   root.scale.setScalar(role === 'guest' ? 0.01 : baseScale);
 
   return {
@@ -309,33 +233,52 @@ export function createPerson({ id, name, role, cast }) {
     shoulderR,
     headAnchor,
     label,
-    mixer,
     baseScale,
     appear: role === 'guest' ? 0 : 1,
   };
 }
 
+/** Keep the username toward the top of the top-down frame, above the head. */
+export function placeLabel(person) {
+  const yaw = person.root.rotation.y;
+  const reach = person.role === 'guest' ? 0.52 : 0.7;
+  const side = person.role === 'gelin' ? 0.32 : person.role === 'damat' ? -0.32 : 0;
+  person.label.position.x = side * Math.cos(yaw) + reach * Math.sin(yaw);
+  person.label.position.z = side * Math.sin(yaw) - reach * Math.cos(yaw);
+}
+
+function restArm(arm, phase) {
+  const side = arm.userData.side;
+  const swing = Math.sin(phase) * 0.18;
+  _dir.set(side * 0.55, -0.55, 0.12 + swing).normalize();
+  arm.quaternion.setFromUnitVectors(UNIT_X, _dir);
+  arm.userData.limb.scale.set(0.36, 1, 1);
+  arm.userData.hand.position.set(0.36, 0, 0);
+}
+
 function aimArm(arm, worldPoint) {
-  if (!arm?.parent || !arm.userData.restDir) return;
   _local.copy(worldPoint);
   arm.parent.worldToLocal(_local);
   _dir.copy(_local).sub(arm.position);
-  if (_dir.lengthSq() < 1e-6) return;
-  _dir.normalize();
-  arm.quaternion.setFromUnitVectors(arm.userData.restDir, _dir);
+  const distance = _dir.length();
+  if (distance < 1e-4) return;
+  _dir.multiplyScalar(1 / distance);
+  arm.quaternion.setFromUnitVectors(UNIT_X, _dir);
+  const reach = Math.min(distance * 0.92, 0.62);
+  arm.userData.limb.scale.set(reach, 1, 1);
+  arm.userData.hand.position.set(reach, 0, 0);
 }
 
-/** One arm reaches the next dancer's nearer shoulder. The walk clip keeps the other arm. */
-export function poseArms(person, next) {
-  if (!next || person.appear < 0.35 || !person.armL || !person.armR) return;
-
+export function poseArms(person, next, phase) {
+  restArm(person.armL, phase);
+  restArm(person.armR, phase + 0.6);
+  if (!next || person.appear < 0.35) return;
   next.shoulderL.getWorldPosition(_a);
   next.shoulderR.getWorldPosition(_b);
   person.root.getWorldPosition(_hold);
   const target = _hold.distanceTo(_a) <= _hold.distanceTo(_b) ? _a : _b;
-  _hold.copy(target);
   person.armL.getWorldPosition(_a);
   person.armR.getWorldPosition(_b);
-  const arm = _a.distanceTo(_hold) <= _b.distanceTo(_hold) ? person.armL : person.armR;
-  aimArm(arm, _hold);
+  const arm = _a.distanceTo(target) <= _b.distanceTo(target) ? person.armL : person.armR;
+  aimArm(arm, target);
 }

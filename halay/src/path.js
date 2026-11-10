@@ -4,19 +4,19 @@ export { GUEST_CAP };
 
 /** Three concentric circles around the couple. Capacities sum to GUEST_CAP. */
 export const RINGS = [
-  { id: 0, capacity: 8, radius: 1.18 },
-  { id: 1, capacity: 12, radius: 1.98 },
-  { id: 2, capacity: 16, radius: 2.78 },
+  { id: 0, capacity: 8, radius: 0.86 },
+  { id: 1, capacity: 12, radius: 1.46 },
+  { id: 2, capacity: 16, radius: 2.06 },
 ];
 
 export const RING_SPIN = 0.32;
 
-/** Stretches depth so the rings read as circles in the portrait camera. */
-export const Z_SCALE = 1.42;
+/** Stretches depth so the rings read as circles in the top-down portrait camera. */
+export const Z_SCALE = 1.18;
 
 export const LEADERS = [
-  { id: 'gelin', name: 'Gelin', role: 'gelin', x: 0.36, z: 0.06 },
-  { id: 'damat', name: 'Damat', role: 'damat', x: -0.36, z: 0.06 },
+  { id: 'gelin', name: 'Gelin', role: 'gelin', x: 0.24, z: 0.04 },
+  { id: 'damat', name: 'Damat', role: 'damat', x: -0.24, z: 0.04 },
 ];
 
 /**
