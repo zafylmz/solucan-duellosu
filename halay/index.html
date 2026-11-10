@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="tr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Halay</title>
+    <link
+      rel="icon"
+      href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Ccircle fill='%238d2f3f' cx='8' cy='8' r='8'/%3E%3C/svg%3E"
+    />
+    <link rel="stylesheet" href="/src/style.css" />
+    <script>
+      if (new URLSearchParams(location.search).get('clean') === '1') {
+        document.documentElement.classList.add('clean');
+      }
+    </script>
+  </head>
+  <body>
+    <div id="frame">
+      <canvas id="view"></canvas>
+      <aside id="panel">
+        <h1>Halay</h1>
+        <p class="hint">Yorumda “katıl” yazan halkaya girer. Kullanıcı adı başının üstünde kalır.</p>
+        <form id="join-form" autocomplete="off">
+          <label>
+            Kullanıcı adı
+            <input
+              id="name"
+              name="halay-guest"
+              maxlength="24"
+              placeholder="ayse"
+              autocomplete="off"
+              autocapitalize="off"
+              spellcheck="false"
+            />
+          </label>
+          <button id="join" type="submit">Katıl</button>
+        </form>
+        <form id="live-form" autocomplete="off">
+          <label>
+            TikTok uniqueId
+            <input
+              id="unique"
+              name="halay-live-id"
+              maxlength="64"
+              placeholder="kullaniciadi"
+              autocomplete="off"
+              autocapitalize="off"
+              spellcheck="false"
+            />
+          </label>
+          <button id="listen" type="submit">Bağlan</button>
+        </form>
+        <p id="status">Köprü bekleniyor</p>
+        <p id="count">Gelin ve damat ortada</p>
+      </aside>
+    </div>
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>
