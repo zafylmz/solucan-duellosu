@@ -12,8 +12,8 @@ function lerpAngle(current, target, amount) {
   return current + delta * amount;
 }
 
-export function createLine(scene, camera, { onArrive } = {}) {
-  const leaders = LEADERS.map((spec) => createPerson(spec));
+export function createLine(scene, camera, { onArrive, cast } = {}) {
+  const leaders = LEADERS.map((spec) => createPerson({ ...spec, cast }));
   const guests = [];
   for (const person of leaders) scene.add(person.root);
 
@@ -27,7 +27,7 @@ export function createLine(scene, camera, { onArrive } = {}) {
     if (!name || !id) return false;
     if (guests.some((person) => person.id === id)) return false;
     if (guests.length >= GUEST_CAP) return false;
-    const person = createPerson({ id, name, role: 'guest' });
+    const person = createPerson({ id, name, role: 'guest', cast });
     scene.add(person.root);
     guests.push(person);
     onArrive?.(person);
@@ -83,14 +83,18 @@ export function createLine(scene, camera, { onArrive } = {}) {
       person.ringId = -1;
     });
 
-    const pose = (person, next, phase) => {
+    const pose = (person, next) => {
       if (!next) {
-        poseArms(person, null, phase);
+        poseArms(person, null);
         return;
       }
+      person.root.updateMatrixWorld(true);
+      next.root.updateMatrixWorld(true);
       const distance = person.root.position.distanceTo(next.root.position);
-      poseArms(person, distance < 1.35 ? next : null, phase);
+      poseArms(person, distance < 1.35 ? next : null);
     };
+
+    for (const person of everyone()) person.mixer?.update(dt);
 
     pose(leaders[0], leaders[1], time * BEAT);
     pose(leaders[1], null, time * BEAT + 0.4);
@@ -130,5 +134,8 @@ export function createLine(scene, camera, { onArrive } = {}) {
     update,
     snapshot,
     guestCount: () => guests.length,
+    focusNamed(name) {
+      return everyone().find((person) => person.name === name) || null;
+    },
   };
 }

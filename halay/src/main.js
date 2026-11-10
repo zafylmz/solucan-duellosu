@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { GUEST_CAP, cleanName } from '../shared/join.js';
 import { createStage } from './stage.js';
 import { createLine } from './line.js';
+import { loadCast } from './people.js';
 
 const params = new URLSearchParams(location.search);
 const bridgePort = params.get('bridge') || '8787';
@@ -16,10 +17,52 @@ const statusNode = document.querySelector('#status');
 const countNode = document.querySelector('#count');
 
 const stage = createStage(canvas);
-const line = createLine(stage.scene, stage.camera, {
-  onArrive(person) {
-    stage.focusOn(person.headAnchor);
-  },
+let line = null;
+const pendingGuests = [];
+
+function addGuestSafe(guest) {
+  if (!line) {
+    pendingGuests.push(guest);
+    return false;
+  }
+  return line.addGuest(guest);
+}
+
+loadCast().then((cast) => {
+  line = createLine(stage.scene, stage.camera, {
+    cast,
+    onArrive(person) {
+      stage.focusOn(person.headAnchor);
+    },
+  });
+  for (const guest of pendingGuests.splice(0)) line.addGuest(guest);
+  renderCount();
+  window.__halay = {
+    join(name) {
+      const added = addGuestSafe({ id: `manual:${crypto.randomUUID()}`, name });
+      renderCount();
+      return added;
+    },
+    guestCount: () => line.guestCount(),
+    cap: GUEST_CAP,
+    snapshot: () => line.snapshot(),
+    focusing: () => stage.isFocusing(),
+    releaseFocus: () => stage.releaseFocus(),
+    show(name) {
+      const person = line.focusNamed(name);
+      if (person) stage.focusOn(person.headAnchor);
+      return Boolean(person);
+    },
+    camera: () => ({
+      x: stage.camera.position.x,
+      y: stage.camera.position.y,
+      z: stage.camera.position.z,
+      focusing: stage.isFocusing(),
+    }),
+  };
+}).catch((error) => {
+  console.error(error);
+  setStatus('Figürler yüklenemedi. Sayfayı yenile.');
 });
 
 const preset = (params.get('live') || '').trim().replace(/^@+/, '');
@@ -30,7 +73,7 @@ let socket;
 let reconnectTimer;
 
 function renderCount() {
-  const count = line.guestCount();
+  const count = line ? line.guestCount() : 0;
   countNode.textContent = count >= GUEST_CAP
     ? `Hat doldu · ${count} / ${GUEST_CAP} misafir`
     : `Gelin ve damat ortada · ${count} / ${GUEST_CAP} misafir`;
@@ -78,12 +121,12 @@ function connectBridge() {
       return;
     }
     if (message.type === 'snapshot') {
-      for (const guest of message.guests || []) line.addGuest(guest);
+      for (const guest of message.guests || []) addGuestSafe(guest);
       if (message.status?.uniqueId && !uniqueInput.value) uniqueInput.value = message.status.uniqueId;
       setStatus(statusText(message.status));
       renderCount();
     } else if (message.type === 'join') {
-      line.addGuest(message.guest);
+      addGuestSafe(message.guest);
       renderCount();
     } else if (message.type === 'status') {
       setStatus(statusText(message.status));
@@ -97,7 +140,7 @@ document.querySelector('#join-form').addEventListener('submit', (event) => {
   event.preventDefault();
   const name = cleanName(nameInput.value);
   if (!name) return;
-  const added = line.addGuest({ id: `manual:${crypto.randomUUID()}`, name });
+  const added = addGuestSafe({ id: `manual:${crypto.randomUUID()}`, name });
   if (added) {
     nameInput.value = '';
     nameInput.blur();
@@ -129,29 +172,10 @@ function tick() {
     viewHeight = height;
     stage.resize();
   }
-  line.update(time, dt);
+  if (line) line.update(time, dt);
   stage.update(time);
   stage.updateCamera(dt);
   stage.render();
   requestAnimationFrame(tick);
 }
 tick();
-
-window.__halay = {
-  join(name) {
-    const added = line.addGuest({ id: `manual:${crypto.randomUUID()}`, name });
-    renderCount();
-    return added;
-  },
-  guestCount: () => line.guestCount(),
-  cap: GUEST_CAP,
-  snapshot: () => line.snapshot(),
-  focusing: () => stage.isFocusing(),
-  releaseFocus: () => stage.releaseFocus(),
-  camera: () => ({
-    x: stage.camera.position.x,
-    y: stage.camera.position.y,
-    z: stage.camera.position.z,
-    focusing: stage.isFocusing(),
-  }),
-};

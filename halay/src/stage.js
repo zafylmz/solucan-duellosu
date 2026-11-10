@@ -12,17 +12,6 @@ function canvasTexture(width, height, draw) {
   return texture;
 }
 
-function floorTexture() {
-  return canvasTexture(512, 512, (ctx) => {
-    const gradient = ctx.createRadialGradient(256, 256, 40, 256, 256, 360);
-    gradient.addColorStop(0, '#e7b184');
-    gradient.addColorStop(0.45, '#b56548');
-    gradient.addColorStop(1, '#6a2c32');
-    ctx.fillStyle = gradient;
-    ctx.fillRect(0, 0, 512, 512);
-  });
-}
-
 function rugTexture() {
   return canvasTexture(1024, 1024, (ctx) => {
     ctx.fillStyle = '#7d2434';
@@ -58,14 +47,144 @@ function rugTexture() {
 }
 
 function skyTexture() {
-  return canvasTexture(16, 256, (ctx) => {
-    const gradient = ctx.createLinearGradient(0, 0, 0, 256);
-    gradient.addColorStop(0, '#5a2838');
-    gradient.addColorStop(0.38, '#b15d68');
-    gradient.addColorStop(0.7, '#f0b294');
-    gradient.addColorStop(1, '#f8ddc0');
+  return canvasTexture(16, 512, (ctx) => {
+    const gradient = ctx.createLinearGradient(0, 0, 0, 512);
+    gradient.addColorStop(0, '#7eb0dc');
+    gradient.addColorStop(0.42, '#c5dff2');
+    gradient.addColorStop(0.72, '#f3e7c4');
+    gradient.addColorStop(1, '#d7e7c4');
     ctx.fillStyle = gradient;
-    ctx.fillRect(0, 0, 16, 256);
+    ctx.fillRect(0, 0, 16, 512);
+  });
+}
+
+function grassTexture() {
+  return canvasTexture(512, 512, (ctx) => {
+    ctx.fillStyle = '#6c9a48';
+    ctx.fillRect(0, 0, 512, 512);
+    for (let i = 0; i < 700; i += 1) {
+      const x = (i * 97) % 512;
+      const y = (i * 57) % 512;
+      ctx.fillStyle = i % 3 === 0 ? '#8fbf62' : '#4f7a34';
+      ctx.fillRect(x, y, 3 + (i % 4), 2 + (i % 3));
+    }
+    ctx.fillStyle = '#e7b7c4';
+    for (let i = 0; i < 40; i += 1) {
+      ctx.fillRect((i * 131) % 512, (i * 89) % 512, 2, 2);
+    }
+  });
+}
+
+function fieldTexture() {
+  return canvasTexture(64, 256, (ctx) => {
+    for (let y = 0; y < 256; y += 16) {
+      ctx.fillStyle = (y / 16) % 2 === 0 ? '#c6b15a' : '#7ea84e';
+      ctx.fillRect(0, y, 64, 16);
+    }
+  });
+}
+
+function addCountryside(scene) {
+  const trunk = new THREE.MeshToonMaterial({ color: 0x6b442c });
+  const cypress = new THREE.MeshToonMaterial({ color: 0x2f6a3a });
+  const canopy = new THREE.MeshToonMaterial({ color: 0x3d8a45 });
+  const canopyDark = new THREE.MeshToonMaterial({ color: 0x2d6a38 });
+  const leaf = new THREE.MeshToonMaterial({ color: 0x4e8f3e });
+  const hillNear = new THREE.MeshToonMaterial({ color: 0x8eaf62 });
+  const hillFar = new THREE.MeshToonMaterial({ color: 0xb7c99a });
+
+  const grass = new THREE.Mesh(
+    new THREE.PlaneGeometry(90, 90),
+    new THREE.MeshStandardMaterial({ map: grassTexture(), roughness: 1 }),
+  );
+  grass.rotation.x = -Math.PI / 2;
+  grass.position.y = -0.02;
+  scene.add(grass);
+
+  const field = new THREE.Mesh(
+    new THREE.PlaneGeometry(46, 16),
+    new THREE.MeshStandardMaterial({ map: fieldTexture(), roughness: 1 }),
+  );
+  field.rotation.x = -Math.PI / 2;
+  field.position.set(0, 0.01, -16);
+  scene.add(field);
+
+  const path = new THREE.Mesh(
+    new THREE.PlaneGeometry(1.7, 4.2),
+    new THREE.MeshStandardMaterial({ color: 0xc6a56e, roughness: 1 }),
+  );
+  path.rotation.x = -Math.PI / 2;
+  path.position.set(0, 0.02, 7.1);
+  scene.add(path);
+
+  function hill(x, z, sx, sy, sz, material) {
+    const mesh = new THREE.Mesh(new THREE.SphereGeometry(1, 20, 14), material);
+    mesh.scale.set(sx, sy, sz);
+    mesh.position.set(x, sy * 0.05, z);
+    scene.add(mesh);
+  }
+  hill(-10, -24, 12, 3.4, 7, hillFar);
+  hill(8, -27, 14, 4.2, 8, hillFar);
+  hill(0, -20, 9, 2.6, 5.5, hillNear);
+  hill(-16, -18, 7, 2.2, 4, hillNear);
+  hill(16, -19, 8, 2.4, 4.5, hillNear);
+
+  function tree(x, z, kind, scale) {
+    const group = new THREE.Group();
+    const stem = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.07 * scale, 0.11 * scale, kind === 'cypress' ? 0.9 * scale : 0.7 * scale, 6),
+      trunk,
+    );
+    stem.position.y = (kind === 'cypress' ? 0.45 : 0.35) * scale;
+    group.add(stem);
+    if (kind === 'cypress') {
+      const foliage = new THREE.Mesh(new THREE.ConeGeometry(0.42 * scale, 2.5 * scale, 8), cypress);
+      foliage.position.y = 1.7 * scale;
+      group.add(foliage);
+    } else {
+      const foliage = new THREE.Mesh(new THREE.SphereGeometry(0.72 * scale, 10, 8), scale > 1.1 ? canopyDark : canopy);
+      foliage.scale.y = 0.78;
+      foliage.position.y = 1.15 * scale;
+      group.add(foliage);
+    }
+    group.position.set(x, 0, z);
+    scene.add(group);
+  }
+
+  const trees = [
+    [-6.4, 2.6, 'round', 1.25],
+    [6.6, 2.1, 'round', 1.15],
+    [-7.4, -1.2, 'cypress', 1.35],
+    [7.6, -0.6, 'cypress', 1.45],
+    [-5.6, -5.2, 'round', 1.05],
+    [5.8, -5.6, 'round', 1.2],
+    [-3.4, -8.4, 'cypress', 1.1],
+    [3.6, -8.8, 'round', 1],
+    [0.2, -10.2, 'cypress', 0.9],
+    [-8.8, -8, 'round', 0.85],
+    [9.2, -7.4, 'cypress', 0.95],
+  ];
+  for (const [x, z, kind, scale] of trees) tree(x, z, kind, scale);
+
+  const blooms = [0xf4b7c8, 0xfff1c9, 0xf0d18a, 0xe7b3c0, 0xf7d0dc];
+  const beds = [
+    [-1.2, 5.4], [1.2, 5.4], [-2.5, 5.8], [2.5, 5.8], [-3.6, 5.3], [3.6, 5.3],
+    [0, 6.5], [-0.8, 6.7], [0.8, 6.7],
+    [-5.3, 2.4], [5.3, 2.1], [-5.6, 0.1], [5.7, -0.2], [-5.1, -2.6], [5.2, -2.8],
+    [-4.7, -4.6], [4.8, -4.8],
+  ];
+  beds.forEach(([x, z], index) => {
+    const scale = 0.85 + (index % 3) * 0.15;
+    const stem = new THREE.Mesh(new THREE.CylinderGeometry(0.018, 0.02, 0.32 * scale, 5), leaf);
+    stem.position.set(x, 0.15 * scale, z);
+    scene.add(stem);
+    flower(scene, x, 0.32 * scale, z, scale * 0.9);
+    const extra = new THREE.Mesh(
+      new THREE.SphereGeometry(0.07 * scale, 8, 6),
+      new THREE.MeshToonMaterial({ color: blooms[index % blooms.length] }),
+    );
+    extra.position.set(x + 0.12, 0.22 * scale, z + 0.05);
+    scene.add(extra);
   });
 }
 
@@ -92,12 +211,12 @@ function flower(parent, x, y, z, scale) {
 
 export function createStage(canvas) {
   const scene = new THREE.Scene();
-  scene.background = new THREE.Color(0x3a1822);
-  scene.fog = new THREE.Fog(0xe7b3a4, 20, 36);
+  scene.background = new THREE.Color(0xc5dff2);
+  scene.fog = new THREE.Fog(0xd5e6c2, 28, 68);
 
   const widePos = new THREE.Vector3(0, 8.2, 12);
   const wideLook = new THREE.Vector3(0, 0.85, 0);
-  const camera = new THREE.PerspectiveCamera(46, 9 / 16, 0.1, 80);
+  const camera = new THREE.PerspectiveCamera(46, 9 / 16, 0.1, 140);
   const currentLook = wideLook.clone();
   camera.position.copy(widePos);
   camera.lookAt(currentLook);
@@ -188,31 +307,26 @@ export function createStage(canvas) {
   renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
 
   const sky = new THREE.Mesh(
-    new THREE.SphereGeometry(36, 28, 18),
+    new THREE.SphereGeometry(78, 28, 18),
     new THREE.MeshBasicMaterial({ map: skyTexture(), side: THREE.BackSide, fog: false, depthWrite: false }),
   );
   scene.add(sky);
 
-  scene.add(new THREE.HemisphereLight(0xfff1dc, 0x8a4e48, 0.95));
-  const key = new THREE.DirectionalLight(0xfff6ea, 2.15);
+  scene.add(new THREE.HemisphereLight(0xd7e8f6, 0x7d9a58, 0.78));
+  const key = new THREE.DirectionalLight(0xfff8f2, 1.25);
   key.position.set(1.6, 6.4, 5.2);
   scene.add(key);
-  const fill = new THREE.DirectionalLight(0xffb7a4, 0.72);
+  const fill = new THREE.DirectionalLight(0xc5d4e8, 0.55);
   fill.position.set(-4.2, 3.2, 2.4);
   scene.add(fill);
-  const rim = new THREE.DirectionalLight(0xffc56a, 1.05);
+  const rim = new THREE.DirectionalLight(0xffe2b0, 0.38);
   rim.position.set(0.4, 3.6, -6);
   scene.add(rim);
-  const glow = new THREE.PointLight(0xffe1c2, 5, 8, 1.5);
-  glow.position.set(0, 2.5, 2.2);
+  const glow = new THREE.PointLight(0xfff3e4, 1.4, 9, 1.6);
+  glow.position.set(0, 2.4, 2.4);
   scene.add(glow);
 
-  const floor = new THREE.Mesh(
-    new THREE.PlaneGeometry(36, 36),
-    new THREE.MeshStandardMaterial({ map: floorTexture(), color: 0xffffff, roughness: 0.9 }),
-  );
-  floor.rotation.x = -Math.PI / 2;
-  scene.add(floor);
+  addCountryside(scene);
 
   const rug = new THREE.Mesh(
     new THREE.CircleGeometry(4.35, 64),
@@ -271,8 +385,8 @@ export function createStage(canvas) {
     bulb.position.set(Math.cos(angle) * (archRadius - 0.18), Math.sin(angle) * (archRadius - 0.18) + 0.05, farZ + 0.12);
     scene.add(bulb);
   }
-  flower(scene, -3.7, 0.18, 0.4, 1.15);
-  flower(scene, 3.7, 0.18, 0.4, 1.15);
+  flower(scene, -4.6, 0.16, 3.2, 0.8);
+  flower(scene, 4.6, 0.16, 3.2, 0.8);
 
   const petalCount = 28;
   const petals = [];
