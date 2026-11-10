@@ -11,8 +11,8 @@ export const RINGS = [
 
 export const RING_SPIN = 0.32;
 
-/** Stretches depth so the rings read as circles in the top-down portrait camera. */
-export const Z_SCALE = 1.18;
+/** Stretches depth so the rings read as circles in the angled portrait camera. */
+export const Z_SCALE = 1.55;
 
 export const LEADERS = [
   { id: 'gelin', name: 'Gelin', role: 'gelin', x: 0.24, z: 0.04 },

@@ -128,7 +128,7 @@ export function createPerson({ id, name, role }) {
   const hairColor = HAIR[(guestHash >> 6) % HAIR.length];
   const vest = flat(vestColor);
   const legs = flat(legColor);
-  const hair = flat(role === 'guest' ? hairColor : 0x2a1a14);
+  const hair = new THREE.MeshBasicMaterial({ color: role === 'guest' ? hairColor : 0x2a1a14 });
   const white = flat(0xfffaf4);
   const gold = flat(0xe6b84a);
 
@@ -186,10 +186,10 @@ export function createPerson({ id, name, role }) {
     veil.position.set(0, 0.7, -0.16);
     bob.add(veil);
   } else if (role === 'guest' && guestHash % 3 !== 0) {
-    const scarf = addMesh(bob, new THREE.SphereGeometry(0.12, 8, 6, 0, Math.PI * 2, 0, Math.PI * 0.5), flat(0xc4162a), 0, headY + 0.1, 0);
+    const scarf = addMesh(bob, new THREE.SphereGeometry(0.12, 8, 6, 0, Math.PI * 2, 0, Math.PI * 0.5), new THREE.MeshBasicMaterial({ color: 0xc4162a }), 0, headY + 0.1, 0);
     scarf.scale.set(1.2, 0.45, 1.15);
   } else if (role === 'guest') {
-    addMesh(bob, new THREE.CylinderGeometry(0.09, 0.11, 0.08, 8), flat(0xc4162a), 0, headY + 0.14, 0);
+    addMesh(bob, new THREE.CylinderGeometry(0.09, 0.11, 0.08, 8), new THREE.MeshBasicMaterial({ color: 0xc4162a }), 0, headY + 0.14, 0);
   }
 
   const sleeve = role === 'damat' ? vest : role === 'gelin' ? skin : vest;
