@@ -1,0 +1,116 @@
+html,
+body {
+  margin: 0;
+  height: 100%;
+  background: #12301c;
+  color: #4a2430;
+  font-family: "Liberation Serif", "Noto Sans", Georgia, serif;
+}
+
+#frame {
+  position: absolute;
+  inset: 0;
+  margin: auto;
+  width: min(100vw, calc(100vh * 9 / 16));
+  height: min(100vh, calc(100vw * 16 / 9));
+  overflow: hidden;
+  background: #101820;
+}
+
+#view {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+#panel {
+  position: absolute;
+  left: 20px;
+  right: 20px;
+  bottom: 20px;
+  padding: 14px 14px 12px;
+  border-radius: 18px;
+  background: rgba(255, 247, 239, 0.94);
+  box-shadow: 0 12px 32px rgba(40, 8, 16, 0.28);
+}
+
+html.clean #panel {
+  display: none;
+}
+
+#hoppa {
+  position: absolute;
+  left: 50%;
+  top: 16%;
+  z-index: 4;
+  margin: 0;
+  pointer-events: none;
+  opacity: 0;
+  font-family: "Liberation Serif", "Noto Sans", Georgia, serif;
+  font-size: 92px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  color: #fff8e4;
+  -webkit-text-stroke: 10px #d21f2a;
+  paint-order: stroke fill;
+  text-shadow: 0 8px 0 rgba(120, 16, 24, 0.35);
+}
+
+#panel h1 {
+  margin: 0;
+  font-size: 26px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+
+.hint,
+#status,
+#count {
+  margin: 6px 0 0;
+  font-family: "Noto Sans", "Liberation Sans", sans-serif;
+  font-size: 14px;
+  line-height: 1.35;
+}
+
+form {
+  display: flex;
+  gap: 8px;
+  align-items: flex-end;
+  margin-top: 10px;
+}
+
+label {
+  flex: 1;
+  font-family: "Noto Sans", "Liberation Sans", sans-serif;
+  font-size: 13px;
+}
+
+input {
+  display: block;
+  width: 100%;
+  box-sizing: border-box;
+  margin-top: 4px;
+  padding: 9px 10px;
+  border: 1px solid #e4cbb6;
+  border-radius: 10px;
+  background: #fff;
+  color: #3a2030;
+  font: inherit;
+  font-size: 16px;
+}
+
+button {
+  border: 0;
+  border-radius: 999px;
+  padding: 10px 16px;
+  background: #8d2f3f;
+  color: #fff8f2;
+  font: inherit;
+  font-size: 16px;
+  cursor: pointer;
+}
+
+button:disabled {
+  opacity: 0.45;
+  cursor: default;
+}

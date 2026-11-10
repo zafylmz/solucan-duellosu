@@ -1,0 +1,20 @@
+{
+  "name": "halay",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "description": "TikTok canlı yayını için dikey halay sahnesi (OBS browser source).",
+  "scripts": {
+    "dev": "vite --host 127.0.0.1 --port 5173 --strictPort",
+    "bridge": "node server/bridge.mjs",
+    "preview": "vite preview --host 127.0.0.1 --port 5173 --strictPort"
+  },
+  "dependencies": {
+    "three": "^0.170.0",
+    "tiktok-live-connector": "^2.1.0",
+    "ws": "^8.18.3"
+  },
+  "devDependencies": {
+    "vite": "^6.3.5"
+  }
+}
