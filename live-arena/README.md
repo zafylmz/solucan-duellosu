@@ -28,7 +28,7 @@ Kaynak boyutu 1080×1920. Özel CSS boş bırakılır. Oyun alanı dışında pa
 
 - Koyu tema sitesi ve kullanıcı paneli
 - Tahmin edilmesi zor yayın bağlantısı; panelden yenilenir
-- Demo olaylar: yorum, beğeni, takip, hediye, izleyici katılımı
+- Demo olaylar: yorum, beğeni, takip, hediye, izleyici katılımı. TikTok Bağlantısı sayfasındaki yarış penceresi bu olayları alır
 - Phaser 3 Turbo Yarış, 9:16
 - Olaylar Socket.IO ile açık sahneye gider
 - Türkçe anlatım kuyruğu, ses aç/kapa ve seviye

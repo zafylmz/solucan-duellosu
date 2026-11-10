@@ -2,6 +2,7 @@
 
 import { createContext, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { io, type Socket } from 'socket.io-client';
+import { publishLocalEvent } from '@/lib/events/local-bus';
 import { demoEvent, type LiveEvent, type LiveEventType } from '@/lib/events/schema';
 import type { GameSettings } from '@/lib/games/types';
 import { loadStudio, saveStudio, type StudioState } from '@/lib/studio';
@@ -71,6 +72,7 @@ export function ArenaProvider({ children }: { children: React.ReactNode }) {
       },
       send(type, username, extra) {
         const event = demoEvent(type, username, extra);
+        publishLocalEvent(studio.token, event);
         socket?.emit('live-event', { token: studio.token, event });
       },
     };

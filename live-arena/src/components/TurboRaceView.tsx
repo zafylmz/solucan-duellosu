@@ -3,9 +3,10 @@
 import { useEffect, useRef, useState } from 'react';
 import { io, type Socket } from 'socket.io-client';
 import { createNarration } from '@/lib/audio/narration';
+import { eventKey, subscribeLocalEvents } from '@/lib/events/local-bus';
+import type { LiveEvent } from '@/lib/events/schema';
 import type { GameInstance, GameSettings } from '@/lib/games/types';
 import { loadStudio, saveStudio } from '@/lib/studio';
-import type { LiveEvent } from '@/lib/events/schema';
 
 export function TurboRaceView({ token }: { token: string }) {
   const host = useRef<HTMLDivElement>(null);
@@ -21,6 +22,7 @@ export function TurboRaceView({ token }: { token: string }) {
     narration.setEnabled(stored.audioEnabled);
     narration.setVolume(stored.audioVolume);
     let socket: Socket | null = null;
+    let stopLocal = () => {};
     let dead = false;
     const onKey = (event: KeyboardEvent) => {
       if (event.key === 'Escape') setOpen((value) => !value);
@@ -48,19 +50,37 @@ export function TurboRaceView({ token }: { token: string }) {
         },
       });
       gameRef.current = game;
+      const seen = new Set<string>();
+      const accept = (event: LiveEvent) => {
+        const key = eventKey(event);
+        if (seen.has(key)) return;
+        seen.add(key);
+        game.handleEvent(event);
+      };
+      stopLocal = subscribeLocalEvents((eventToken, event) => {
+        if (eventToken === token) accept(event);
+      });
       socket = io({ reconnection: true });
       socket.on('connect', () => socket?.emit('join-room', { token }));
-      socket.on('live-event', (event: LiveEvent) => game.handleEvent(event));
+      socket.on('live-event', accept);
       socket.on('settings', (settings: GameSettings) => {
         if (!settings || !Array.isArray(settings.gifts)) return;
         game.applySettings(settings);
       });
+      if (dead) {
+        stopLocal();
+        socket.disconnect();
+        game.destroy();
+        gameRef.current = null;
+      }
     })();
     return () => {
       dead = true;
       window.removeEventListener('keydown', onKey);
+      stopLocal();
       socket?.disconnect();
       gameRef.current?.destroy();
+      gameRef.current = null;
     };
   }, [token]);
 

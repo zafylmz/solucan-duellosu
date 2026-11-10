@@ -4,12 +4,14 @@ import { useState } from 'react';
 import { useArena } from '@/components/ArenaContext';
 
 export default function TikTokPage() {
-  const { send, status } = useArena();
+  const { send, status, studio } = useArena();
   const [username, setUsername] = useState('ayse');
   const [giftName, setGiftName] = useState('Rose');
   const [giftCount, setGiftCount] = useState(1);
   const [likeCount, setLikeCount] = useState(15);
   const [note, setNote] = useState('Demo hazır.');
+
+  const raceUrl = `/play/${studio.token}`;
 
   function fire(kind: 'CHAT' | 'LIKE' | 'FOLLOW' | 'GIFT' | 'JOIN') {
     const name = username.trim();
@@ -17,7 +19,7 @@ export default function TikTokPage() {
     if (kind === 'GIFT') send('GIFT', name, { giftName, giftCount, diamondValue: 1 });
     else if (kind === 'LIKE') send('LIKE', name, { likeCount });
     else send(kind, name);
-    setNote(`${name} için ${kind} gönderildi.`);
+    setNote(`${name} yarışa yazıldı. Araba alttaki pencerede görünür.`);
   }
 
   return (
@@ -29,11 +31,19 @@ export default function TikTokPage() {
       <p className="mt-3 text-sm text-white/55">
         TikTok’un herkese açık bir canlı sohbet veya hediye API’si yok. Şifre ve çerez istenmez. Olaylar demo sağlayıcıdan gider.
       </p>
-      <label className="mt-5 block text-sm">Kullanıcı adı
-        <input className="mt-1 w-full rounded-xl border border-line bg-ink px-3 py-2" value={username} onChange={(event) => setUsername(event.target.value)} />
-      </label>
+      <form
+        className="mt-5"
+        onSubmit={(event) => {
+          event.preventDefault();
+          fire('CHAT');
+        }}
+      >
+        <label className="block text-sm">Kullanıcı adı
+          <input className="mt-1 w-full rounded-xl border border-line bg-ink px-3 py-2" value={username} onChange={(event) => setUsername(event.target.value)} />
+        </label>
+        <button className="mt-4 rounded-full bg-electric px-4 py-2" type="submit">Yorum</button>
+      </form>
       <div className="mt-4 flex flex-wrap gap-2">
-        <button className="rounded-full bg-electric px-4 py-2" type="button" onClick={() => fire('CHAT')}>Yorum</button>
         <button className="rounded-full border border-line px-4 py-2" type="button" onClick={() => fire('FOLLOW')}>Takip</button>
         <button className="rounded-full border border-line px-4 py-2" type="button" onClick={() => fire('JOIN')}>Katılım</button>
       </div>
@@ -53,6 +63,8 @@ export default function TikTokPage() {
         <button className="rounded-full bg-neon px-4 py-2 font-semibold text-ink" type="button" onClick={() => fire('GIFT')}>Hediye gönder</button>
       </div>
       <p className="mt-4 text-sm text-white/70">{note}</p>
+      <p className="mt-6 text-sm text-white/70">Yorum yalnızca bu yarışa gider. TikTok sohbetindeki yazı buraya düşmez.</p>
+      <iframe title="Turbo Yarış" src={raceUrl} className="mt-3 h-[640px] w-full max-w-[360px] rounded-3xl border border-line bg-black" />
     </section>
   );
 }
